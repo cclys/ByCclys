@@ -1,0 +1,126 @@
+import pygame
+import random
+import sys
+
+#Variables
+wid = 400
+hei = 600
+key0 = ''
+fr_count = 0
+fps = pygame.time.Clock()
+pipes = []
+untouched_pipes = []
+to_delete_pipes = []
+game = 'before'
+vel_y = 0.0
+score = 0
+
+#Screen
+window = pygame.display.set_mode((wid, hei))
+pygame.display.set_caption('Flappy Bird')
+pygame.init()
+
+#Color
+black = pygame.Color(0, 0, 0)
+white = pygame.Color(255, 255, 255)
+red = pygame.Color(255, 0, 0)
+green = pygame.Color(0, 255, 0)
+
+#Text
+def p_write(text,color,font,size,x,y):
+    p_font = pygame.font.SysFont(font,size)
+    p_text = p_font.render(str(text),True,color)
+    window.blit(p_text,(x,y))
+
+#Objects
+class Bird:
+    def __init__(this,x,y,d):
+        this.x = x
+        this.y = y
+        this.d = d
+    def draw(this):
+        pygame.draw.rect(window,white,(this.x,this.y,this.d,this.d))
+
+class Pipe:
+    def __init__(this,x):
+        this.x = x
+        this.space = 140
+        this.width = 50
+        this.speed = 1.5
+        this.max = 90
+        this.height = hei-this.max-this.space
+        this.y = random.randint((-1)*(this.height-this.max),0)
+    def update(this):
+        this.x -=this.speed 
+    def draw(this):
+        pygame.draw.rect(window,green,(this.x,this.y,this.width,this.height))
+        pygame.draw.rect(window,green,(this.x,this.y+this.space+this.height,this.width,this.height))
+
+#Sprite
+bird = Bird(wid/4,hei/2,30)
+
+#Mainloop
+while True:
+    window.fill(black)
+    #Check key pressed
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE or event.key == pygame.K_UP:
+                key0 = 'up'
+                if game != 'start':
+                    score = 0
+                    game = 'start'
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                sys.exit()
+    if game == 'over':
+        to_delete_pipes = []
+        pipes = []
+        bird.y = hei/2
+        bird.draw()
+    if game == 'before':
+        bird.draw()
+    if game == 'start':
+        bird.draw()
+        #Bird physics
+        vel_y += 0.5
+        bird.y += vel_y
+        if key0 == 'up':
+            vel_y = -7
+            key0 = ''
+        #New pipe
+        fr_count += 1
+        if fr_count == 120:
+            new_pipe = Pipe(wid)
+            pipes.append(new_pipe)
+            untouched_pipes.append(new_pipe)
+            fr_count = 0
+        for pipe in pipes:
+            pipe.update()
+            pipe.draw()
+            #Delete pipes which went off screen
+            if pipe.x < pipe.width*(-1):
+                to_delete_pipes.append(pipe)
+            #Gameover
+            if (bird.x + bird.d) >= pipe.x and bird.x <= (pipe.x+pipe.width):
+                if bird.y <= ( pipe.y + pipe.height ):
+                    game = 'over'
+                elif ( bird.y + bird.d ) >= ( pipe.y + pipe.height + pipe.space ):
+                    game = 'over'
+            #Score
+            if bird.x > pipe.x and ( pipe in untouched_pipes ):
+                untouched_pipes.remove(pipe)
+                score += 1
+        #Delete pipes which went off screen
+        for pipe in to_delete_pipes:
+            pipes.remove(pipe)
+        to_delete_pipes = []
+    if score < 10:
+        p_write(score,white,'Calibri',60,185,50)
+    elif score > 9:
+        p_write(score,white,'Calibri',60,170,50)
+    fps.tick(60)
+    pygame.display.update()
